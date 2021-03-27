@@ -7,20 +7,19 @@ import os
 
 class CocoDataset(Dataset):
     
-    def __init__(self, graphs_path, instan_path, normalize=True, vocab=None, image_size=(256, 256), 
-    amr=True, uq_cap=False, max_objects=10, all_objects_valid=True, include_image=-1):
+    def __init__(self, graphs_path, instan_path, normalize=True, vocab=None, image_size=(256, 256), uq_cap=False, max_objects=10, all_objects_valid=True, include_image=-1):
         
         # Paths of the file
         self.graphs_path = graphs_path
         self.instan_path = instan_path
 
+        # Normalize input
         self.normalize = normalize
 
         # image_size
         self.image_size = image_size
         
         # dataset information
-        self.amr = amr
         self.uq_cap = uq_cap
         self.max_objects = max_objects
         self.all_objects_valid = all_objects_valid
@@ -38,7 +37,6 @@ class CocoDataset(Dataset):
             self.image_id_to_triples = {}
             self.image_id_to_object_list = {}
             self.vocab = vocab
-            self.num_of_valid_object = {}
             self.image_id_to_caption = {}
 
             for image_id in graph_data.keys():
@@ -49,16 +47,19 @@ class CocoDataset(Dataset):
                     # Each image can have MORE than one caption therefore we create strings
                     # of type "00001-1" for the first caption "00001-2" for the second caption
                     # and so on
-                    if self.amr:
-                        if len(graph_data[image_id]['graphs'][i]['triples']) == 0:
-                            continue
+
+                    # If there are not triples continue
+                    if len(graph_data[image_id]['graphs'][i]['triples']) == 0:
+                        continue
                     
+                    # If all the objects are not valid take into account graphs that have at least one valid object
+                    if not all_objects_valid:
                         all_ceros_k2 = True
                         for k1, k2 in graph_data[image_id]['graphs'][i]['objects']:
                             if k2 == 1:
                                 all_ceros_k2 = False
                                 number_of_ones += 1
-                                
+                                    
                         if all_ceros_k2:
                             continue
 
@@ -69,31 +70,23 @@ class CocoDataset(Dataset):
                             max_obj_id = i
                             number_of_ones_id = number_of_ones
                     else:
-                        # The information in this loop is unique to each caption
+                        # Add all the information about the caption
                         image_id_c  = str(image_id) + "-" + str(i)
                         self.image_ids.append(image_id_c)
                         self.image_id_to_triples[image_id_c] = graph_data[image_id]['graphs'][i]['triples']
                         self.image_id_to_object_list[image_id_c] = graph_data[image_id]['graphs'][i]['objects']
-                        self.num_of_valid_object[image_id_c] = number_of_ones if self.amr else len(graph_data[image_id]['graphs'][i]['objects'])
                         self.image_id_to_caption[image_id_c] = graph_data[image_id]['graphs'][i]['caption']
                         
                 if self.uq_cap:
-                    if len(graph_data[image_id]['graphs']) == 0:
-                        continue
-                    elif self.amr and number_of_ones_id == 0:
-                        continue
-                    elif not self.amr and max_obj == 0:
+                    if len(graph_data[image_id]['graphs']) == 0 or number_of_ones_id == 0:
                         continue
                     
-                    if self.amr and max_obj == 0:
-                        print("ERROR")
                     self.image_ids.append(image_id)
                     self.image_id_to_triples[image_id] = graph_data[image_id]['graphs'][max_obj_id]['triples']
                     self.image_id_to_object_list[image_id] = graph_data[image_id]['graphs'][max_obj_id]['objects']
-                    self.num_of_valid_object[image_id] = number_of_ones_id if self.amr else max_obj
                     self.image_id_to_caption[image_id] = graph_data[image_id]['graphs'][max_obj_id]['caption']
 
-                # The information that is the same for all the captions
+                # Add the information that is the same for all the captions
                 self.image_id_to_filename[image_id] = graph_data[image_id]['image_filename']
                 width, height = graph_data[image_id]['width'], graph_data[image_id]['height']
                 self.image_id_to_size[image_id] = (width, height)
@@ -117,14 +110,13 @@ class CocoDataset(Dataset):
             }
 
             
-            # Objects
+            # Create vocabulary for the objects
             seen_obj = set()
             p = 0
             
             for key, value in self.image_id_to_object_list.items():
                 for obj in value:
-                    if self.amr:
-                        obj = obj[0]
+                    obj = obj[0]
                     if obj in seen_obj or obj.lower() in seen_obj:
                         continue
                     seen_obj.add(obj)
@@ -134,7 +126,7 @@ class CocoDataset(Dataset):
                     self.vocab['object_idx_to_name'][p+2] = obj.lower()
                     p += 1
                 
-            # Relations  
+            # Creathe vocabulary for the relations
             seen_rel = set()    
             p = 0
             for key, value in self.image_id_to_triples.items():
@@ -148,10 +140,10 @@ class CocoDataset(Dataset):
                     self.vocab['pred_idx_to_name'][p+2] = rel[1].lower()
                     p += 1
             
+            # Read all the coco categories of the dataset
             with open(self.instan_path, 'r') as json_file:
                 data = json.load(json_file)
                 for categories in data['categories']:
-                    # Objects that the COCO dataset use
                     category_id = categories['id']
                     category_name = categories['name']
                         
@@ -170,16 +162,14 @@ class CocoDataset(Dataset):
         instances_data = None
         with open(self.instan_path, 'r') as json_file:
             instances_data = json.load(json_file) 
-            # Add object data from instances
+            # Add object data from coco instances
             self.image_id_to_objects = defaultdict(list)
             for object_data in instances_data['annotations']:
                 image_id = object_data['image_id']
                 if str(image_id) in self.image_id_to_filename:
                     self.image_id_to_objects[str(image_id)].append(object_data)
-                    # word = self.vocab['index2wordCoco'][object_data['category_id']]
-                    # self.vocab['word2count'][word] += 1
 
-        # Delete the instances that has no coco objects
+        # Delete the captions that has no coco objects
         total = 0
         for id in self.image_ids:
             new = id if self.uq_cap else id.split("-")[0]
@@ -191,13 +181,12 @@ class CocoDataset(Dataset):
         if vocab_remove:
             self.vocab['word2count']["<sos>"] -= total
             self.vocab['word2count']["<eos>"] -= total
-        
-        del self.num_of_valid_object, self.image_id_to_filename, 
                 
     def get_coco_objects_tensor(self, idx):
         # Obtain the coco objects associated with idx
         image_id = self.image_ids[idx]
         img_id = image_id.split("-")[0]
+
         # Obtain original and target size
         WW, HH = self.image_id_to_size[img_id]
         H, W = self.image_size
@@ -219,11 +208,14 @@ class CocoDataset(Dataset):
             # Normalize [0, 1]
             x, y, w, h, x1, y1 = x / WW, y / HH, w / WW, h / HH, (x+w) / WW, (y+h) / HH
             x_mean, y_mean = (x + x1)*0.5, (y + y1)*0.5
+
             # Scale to our desired ouput size (not recommended)
             if not self.normalize:
                 x, y, w, h, x1, y1, x_mean, y_mean = x * W, y * H, w * W, h * H, x1 * W, y1* H, x_mean * H, y_mean * W
-                
+            
             l = self.vocab['word2index'][word]
+
+            # Add the class and the bbox
             boxes.append(torch.FloatTensor([x_mean, y_mean, w, h]))
             ids.append(int(l))
         
@@ -234,7 +226,7 @@ class CocoDataset(Dataset):
         boxes = torch.stack(boxes, dim=0)
         ids = torch.LongTensor(ids)
 
-        # Reorder
+        # Reorder the bounding boxes by area (from biggest to smallest) and take only MAX_OBJECTS
         sizes = boxes[1:len(boxes)-1, 2] * boxes[1:len(boxes)-1, 3]
         sorted_indices = [0] + (torch.argsort(sizes) + 1).tolist()[::-1][:self.max_objects]  + [len(boxes)-1]
         boxes = boxes[sorted_indices, :]
@@ -246,10 +238,12 @@ class CocoDataset(Dataset):
         return len(self.image_ids)
     
     def get_image_id(self, idx):
+        # This function returns the image_id at position idx
         return self.image_ids[idx]
     
-    def get_image_caption(self, idx):
-        return self.image_id_to_caption[idx]
+    def get_image_caption(self, image_id):
+        # this function return the caption given the image_id
+        return self.image_id_to_caption[image_id]
 
     def __getitem__(self, idx):
         """
@@ -261,27 +255,24 @@ class CocoDataset(Dataset):
             valid_objs  -> Objects that are going to be used after the GCN
             coco_boxes  -> Bounding boxes for each object
             coco_ids    -> coco id for each bounding box
-        
+            out_idx     -> idx of each image_id
         """
         
-        # Load the information
+        # Retrieve the information
         image_id = self.image_ids[idx]
         out_idx = idx
         img_id = image_id.split("-")[0]
         
-        # Apply transformations to the pictures
         
+        # Create a list with the valid objects
         objs, valid_objs = [], []
         for word in self.image_id_to_object_list[image_id]:
-            if self.amr:
-                idx = 1 if word[0].lower() not in self.vocab['object_name_to_idx'] else self.vocab['object_name_to_idx'][word[0].lower()]
-                if self.all_objects_valid:
-                    valid_objs.append(1)
-                else:
-                    valid_objs.append(word[1])
-            else:
-                idx = 1 if word.lower() not in self.vocab['object_name_to_idx'] else self.vocab['object_name_to_idx'][word.lower()]
+            idx = 1 if word[0].lower() not in self.vocab['object_name_to_idx'] else self.vocab['object_name_to_idx'][word[0].lower()]
+            if self.all_objects_valid:
                 valid_objs.append(1)
+            else:
+                valid_objs.append(word[1])
+
             objs.append(idx)
         
             
@@ -294,7 +285,7 @@ class CocoDataset(Dataset):
         triples = []
         # Add triples
         for triple in self.image_id_to_triples[image_id]:
-            # Triples information to know with which object it matches
+            # Triples information to know [obj, rel, obj]
             s, o = triple[0][1], triple[2][1]
             p = 1 if triple[1].lower() not in self.vocab['pred_name_to_idx'] else self.vocab['pred_name_to_idx'][triple[1].lower()]
             triples.append([s, p, o])
@@ -305,7 +296,7 @@ class CocoDataset(Dataset):
         for i in range(O - 1):
             triples.append([i, in_image, O - 1])
 
-        # Obtain the associated objects
+        # Obtain the associated objects to the image_id
         boxes_coco, ids_coco = self.get_coco_objects_tensor(out_idx)
 
         # Convert to long tensors
@@ -320,23 +311,22 @@ def coco_collate_fn(batch):
     Collate function to be used when wrapping CocoSceneGraphDataset in a
     DataLoader. Returns a tuple of the following:
 
-    - imgs: FloatTensor of shape (N, C, H, W)
     - objs: LongTensor of shape (O,) giving object categories
-    - boxes: FloatTensor of shape (O, 4)
     - triples: LongTensor of shape (T, 3) giving triples
     - obj_to_img: LongTensor of shape (O,) mapping objects to images
     - triple_to_img: LongTensor of shape (T,) mapping triples to images
+    - valid_objects: LongTensor of shape (O, ) mapping objects to images
+    - boxes: FloatTensor of shape (O, 4)
+    - ids_coco: LongTensor of shape (O, ) giving coco classes categories
+    - coco_to_img: LongTensor of shape (T,) mapping bbox and classes to images
     """
-    # all_imgs, all_objs, all_boxes, all_triples = [], [], [], []
     all_objs, all_triples = [], []
     all_obj_to_img, all_triple_to_img = [], []
     all_valid_objects = []
     all_boxes_coco, all_ids_coco, all_coco_to_img = [], [], []
     all_idx = []
     obj_offset = 0
-    # for i, (img, objs, boxes, triples, match) in enumerate(batch):
     for i, (objs, triples, valid_objects, boxes_coco, ids_coco, idx) in enumerate(batch):
-        # all_imgs.append(img[None])
         if objs.dim() == 0 or triples.dim() == 0:
             continue
         O, T = objs.size(0), triples.size(0)

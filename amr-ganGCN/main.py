@@ -6,7 +6,7 @@ from model.encoderGCN import Sg2ImModel
 from model.decoderRNN import DecoderRNN
 from model.seq2seq import Seq2Seq
 from evaluator import Evaluator
-from loss import giou_loss, iou_loss, ciou_loss, diou_loss, bbox_loss
+from loss import bbox_loss
 
 from dataset import CocoDataset, coco_collate_fn
 from gpu import DeviceDataLoader, get_default_device, to_device
@@ -28,34 +28,32 @@ NUM_WORKERS = 4
 SHUFFLE = True
 PIN_MEMORY = True
 
-# Dataset hiperparameters
+# Dataset hyperparameters
 IMAGE_SIZE = (256, 256)
-AMR = True
-INCLUDE_IMAGE = -1
-UQ_CAP = False
-ALL_OBJECTS_VALID = True
-HIDDEN_SIZE = 128
-MAX_OBJECTS = 10
-NORMALIZE_INPUT = True
-BIDIRECTIONAL = True
-USE_ATTENTION = True
-XY_DISTRIBUTION_SIZE = 32
+INCLUDE_IMAGE = -1 # Include __image__ node to the lstm. Values: 1 to include __image__ otherwise any number.
+UQ_CAP = False # Use one caption or all the captions. Values: False -> All the captions. True -> One caption
+ALL_OBJECTS_VALID = True # Include all the objects nodes to the lstm. Values: True -> include all. False -> Only the selected ones.
+HIDDEN_SIZE = 128 
+MAX_OBJECTS = 10 # Maximum number of objects to use from the dataset
+NORMALIZE_INPUT = True # Normalize the pictures to range [0, 1].
+BIDIRECTIONAL = True # Use a bidirectional encoder
+USE_ATTENTION = True # use attention in the decoder
+XY_DISTRIBUTION_SIZE = 32 # Size of grid use in the picture to approximate the bounding boxes.
 
 # Training
-EPOCHS = 3
-PRINT_EVERY = 50
-IS_TRAINING = False
-RESUME = False
-RESUME_EPOCH = 0
-CHECKPOINTS_PATH = "./checkpoints/1"
-SAVE_OUTPUT = True
+EPOCHS = 3 # Number of epochs to train
+PRINT_EVERY = 50 # Print information about the model every n steps
+IS_TRAINING = True # Set the model to training or validation. Values: True -> Training mode. False -> Validation mode
+CHECKPOINTS_PATH = "./checkpoints/1" # Path to save the epochs and average losses
 
 # Validation
-CALCULATE_GAUSS_DICT = True
-GAUSS_DICT_PATH = "./data/gaussian_dict_full.npy"
-VALIDATION_OUTPUT = "./evaluator_output/1" # Without ending in /
+CALCULATE_GAUSS_DICT = True # Gauss dictionary to sample objects. Values: True -> calculates and saves the gaussian dict. False -> Uses the file located at GAUSS_DICT_PATH  
+GAUSS_DICT_PATH = "./data/gaussian_dict_full.npy" # Path to the gauss dict
+SAVE_OUTPUT = True # Wheter to save or not the output (bbox and class for each picture) when validating. Values: True -> the output is saved. False -> The output is not saved
+VALIDATION_OUTPUT = "./evaluator_output/1" # Path to save the output (bbox and class for each picture)
+EPOCH_VALIDATION = 28 # Number of the epoch to validate
 
-# Paths tot he training and validation dataset
+# Paths to the training development and validation dataset
 GRAPHS_PATH_TRAIN = "./data/datasets/AMR2014train-dev-test/GraphTrain.json"
 INSTAN_PATH_TRAIN = "./data/datasets/COCO/annotations/instances_train2014.json"
 
@@ -66,12 +64,15 @@ GRAPHS_PATH_VAL = "./data/datasets/AMR2014train-dev-test/GraphTest.json"
 INSTAN_PATH_VAL = "./data/datasets/COCO/annotations/instances_val2014.json"
 
 def generate_dataset(graph_path_train, instan_path_train, graph_path_test, instan_path_test, 
-                    normalize_input=True, amr=True, uq_cap=False, include_image=False, max_objects=10,
+                    normalize_input=True, uq_cap=False, include_image=False, max_objects=10,
                     shuffle=True, num_workers=4, pin_memory=True, batch_size=16):
+    """
+    Function to generate the dataset and dataloaders
+    """
 
     # Create the dataset
     print("Loading training dataset")
-    train_ds = CocoDataset(graph_path_train, instan_path_train, normalize=normalize_input, amr=amr, uq_cap=uq_cap, include_image=include_image, max_objects=max_objects)
+    train_ds = CocoDataset(graph_path_train, instan_path_train, normalize=normalize_input, uq_cap=uq_cap, include_image=include_image, max_objects=max_objects)
 
     if IS_TRAINING:
         print("Counting valid objects...")
@@ -82,7 +83,7 @@ def generate_dataset(graph_path_train, instan_path_train, graph_path_test, insta
                 train_ds.vocab['word2count'][train_ds.vocab['index2word'][j.item()]] += 1
                 
     print("Loading validation dataset")
-    val_ds = CocoDataset(graph_path_test, instan_path_test, normalize=normalize_input, vocab=train_ds.vocab, amr=amr, uq_cap=uq_cap, include_image=include_image, max_objects=max_objects)
+    val_ds = CocoDataset(graph_path_test, instan_path_test, normalize=normalize_input, vocab=train_ds.vocab, uq_cap=uq_cap, include_image=include_image, max_objects=max_objects)
 
     print("Train length:", len(train_ds))
     print("Validation length:", len(val_ds))
@@ -91,7 +92,7 @@ def generate_dataset(graph_path_train, instan_path_train, graph_path_test, insta
     train_dl = DataLoader(train_ds, batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory, collate_fn=coco_collate_fn)
     val_dl = DataLoader(val_ds, batch_size, num_workers=num_workers, pin_memory=pin_memory, collate_fn=coco_collate_fn)
 
-    # Send dataset to GPU
+    # Send dataset to GPU if available
     device = get_default_device()
     train_dl = DeviceDataLoader(train_dl, device)
     val_dl = DeviceDataLoader(val_dl, device)
@@ -99,14 +100,24 @@ def generate_dataset(graph_path_train, instan_path_train, graph_path_test, insta
     return train_dl, val_dl, train_ds.vocab, train_ds, val_ds
 
 def generate_encoder(vocab, bidirectional=True, hidden_size=128, image_size=(256, 256)):
+    """
+    Function to generate the encoder
+    """
     encoder = Sg2ImModel(vocab, image_size=image_size, embedding_dim=64, gconv_dim=hidden_size, bidirectional=bidirectional)
     return encoder
 
 def generate_decoder(vocab, is_training, use_attention=False, bidirectional=True, hidden_size=128, xy_distribution_size=16):
+    """
+    Function to generate the decoder
+    """
     decoder = DecoderRNN(vocab, hidden_size, is_training, use_attention=use_attention, bidirectional=bidirectional, xy_distribution_size=xy_distribution_size)
     return decoder
 
 def generate_losses(vocab, train_ds):
+    """
+    Function to generate the losses
+    """
+
     # Class loss
     total_sum = sum(vocab['word2count'].values())
     weight = torch.zeros(len(vocab['word2index']))
@@ -118,15 +129,20 @@ def generate_losses(vocab, train_ds):
     
     lloss = nn.CrossEntropyLoss(weight, ignore_index=0)
     
-    device = get_default_device()
+    # bbox loss
     bloss_xy = nn.CrossEntropyLoss()
     bloss_wh = bbox_loss
 
+    # send losses to GPU if available
+    device = get_default_device()
     lloss, bloss_xy, bloss_wh = to_device(lloss, device), to_device(bloss_xy, device), bloss_wh
 
     return lloss, bloss_xy, bloss_wh
 
 def calculate_gaussian_dict(train_ds):
+    """
+    Function to calculate the gaussian dictionary.
+    """
     print("Getting class stats")
     sta_dict, gaussian_dict = {}, {}
     for i in tqdm(range(len(train_ds))):
@@ -158,29 +174,35 @@ if __name__ == "__main__":
         valg = GRAPHS_PATH_VAL
         vali = INSTAN_PATH_VAL
     train_dl, val_dl, vocab, train_ds, val_ds = generate_dataset(GRAPHS_PATH_TRAIN, INSTAN_PATH_TRAIN, valg, vali, uq_cap=UQ_CAP, batch_size=BATCH_SIZE, max_objects=MAX_OBJECTS)
-
+    
     # Generate the seq2seq model
+
+    encoder, decoder = generate_encoder(vocab, hidden_size=HIDDEN_SIZE), generate_decoder(vocab, IS_TRAINING, xy_distribution_size=XY_DISTRIBUTION_SIZE, use_attention=USE_ATTENTION, hidden_size=HIDDEN_SIZE)
+    
+    # +2 objects because we need to include the <sos> and <eos>
+    seq2seq = Seq2Seq(encoder, decoder, vocab, IS_TRAINING, max_len=MAX_OBJECTS+2)
+    
+    # Move the model to GPU if available
     device = get_default_device()
     print("USING DEVICE", device)
 
-    encoder, decoder = generate_encoder(vocab, hidden_size=HIDDEN_SIZE), generate_decoder(vocab, IS_TRAINING, xy_distribution_size=XY_DISTRIBUTION_SIZE, use_attention=USE_ATTENTION, hidden_size=HIDDEN_SIZE)
-            
-    seq2seq = Seq2Seq(encoder, decoder, vocab, IS_TRAINING, max_len=MAX_OBJECTS+2)
     seq2seq = to_device(seq2seq, device)
-
+    
     # Generate the losses
     lloss, bloss_xy, bloss_wh = generate_losses(vocab, train_ds)
 
+    # Calculate gaussian dict and open the file
     if CALCULATE_GAUSS_DICT:
         calculate_gaussian_dict(train_ds)
     gaussian_dict = np.load(GAUSS_DICT_PATH, allow_pickle=True).item()
 
+    # Train or validate
     if IS_TRAINING:
         train = SupervisedTrainer(seq2seq, vocab, EPOCHS, PRINT_EVERY, lloss, bloss_xy, bloss_wh, BATCH_SIZE, HIDDEN_SIZE, 1e-3, torch.optim.Adam, len(train_dl), checkpoints_path=CHECKPOINTS_PATH, gaussian_dict=gaussian_dict, validator_output_path=VALIDATION_OUTPUT, save_output=SAVE_OUTPUT)        
-        train.train_epoches(train_dl, train_ds, val_dl, val_ds, start_epoch=RESUME_EPOCH+1 if RESUME else 0)
+        train.train_epoches(train_dl, train_ds, val_dl, val_ds)
     else:
-        epoch = 28
+        # Epoch to validate
+        epoch = EPOCH_VALIDATION
         seq2seq.load_state_dict(torch.load(CHECKPOINTS_PATH + "/amr-gan" + str(epoch) + ".pth"))
-
         evaluator = Evaluator(seq2seq, lloss, bloss_xy, bloss_wh, vocab, gaussian_dict=gaussian_dict, validator_output_path=VALIDATION_OUTPUT, save_output=True, verbose=False, name="TESTING")
         evaluator.evaluate(val_dl, val_ds, epoch, CHECKPOINTS_PATH)
