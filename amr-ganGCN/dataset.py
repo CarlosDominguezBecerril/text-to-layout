@@ -40,13 +40,8 @@ class CocoDataset(Dataset):
             self.image_id_to_caption = {}
 
             for image_id in graph_data.keys():
-                # Only for unique caption 
-                max_obj, max_obj_id, number_of_ones_id = 0, 0, 0
                 for i in range(graph_data[image_id]['valid_captions']):
                     number_of_ones = 0
-                    # Each image can have MORE than one caption therefore we create strings
-                    # of type "00001-1" for the first caption "00001-2" for the second caption
-                    # and so on
 
                     # If there are not triples continue
                     if len(graph_data[image_id]['graphs'][i]['triples']) == 0:
@@ -64,13 +59,13 @@ class CocoDataset(Dataset):
                             continue
 
                     if self.uq_cap:
-                        # Take the caption with the most objects
-                        if len(graph_data[image_id]['graphs'][i]['objects']) > max_obj:
-                            max_obj = len(graph_data[image_id]['graphs'][i]['objects'])
-                            max_obj_id = i
-                            number_of_ones_id = number_of_ones
+                        # use the first caption
+                        break
                     else:
                         # Add all the information about the caption
+                        # Each image can have MORE than one caption therefore we create strings
+                        # of type "00001-1" for the first caption "00001-2" for the second caption
+                        # and so on
                         image_id_c  = str(image_id) + "-" + str(i)
                         self.image_ids.append(image_id_c)
                         self.image_id_to_triples[image_id_c] = graph_data[image_id]['graphs'][i]['triples']
@@ -78,13 +73,10 @@ class CocoDataset(Dataset):
                         self.image_id_to_caption[image_id_c] = graph_data[image_id]['graphs'][i]['caption']
                         
                 if self.uq_cap:
-                    if len(graph_data[image_id]['graphs']) == 0 or number_of_ones_id == 0:
-                        continue
-                    
                     self.image_ids.append(image_id)
-                    self.image_id_to_triples[image_id] = graph_data[image_id]['graphs'][max_obj_id]['triples']
-                    self.image_id_to_object_list[image_id] = graph_data[image_id]['graphs'][max_obj_id]['objects']
-                    self.image_id_to_caption[image_id] = graph_data[image_id]['graphs'][max_obj_id]['caption']
+                    self.image_id_to_triples[image_id] = graph_data[image_id]['graphs'][i]['triples']
+                    self.image_id_to_object_list[image_id] = graph_data[image_id]['graphs'][i]['objects']
+                    self.image_id_to_caption[image_id] = graph_data[image_id]['graphs'][i]['caption']
 
                 # Add the information that is the same for all the captions
                 self.image_id_to_filename[image_id] = graph_data[image_id]['image_filename']

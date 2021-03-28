@@ -96,71 +96,41 @@ class Sg2ImModel(nn.Module):
             obj_vecs, pred_vecs = self.gconv_net(obj_vecs, pred_vecs, edges)
         
         include = []
+        # Select only the valid objects
         valid_objs_numpy = valid_objs.cpu().numpy()
         for i in range(len(valid_objs_numpy)):
             if valid_objs_numpy[i] == 1:
                 include.append(i)
         include = to_device(torch.tensor(include), obj_vecs.device)
         
+        # Select only the valid vectors
         valid_vectors = torch.index_select(obj_vecs, 0, include)
-
         obj_to_img_include = torch.index_select(obj_to_img, 0, include)
 
+        # Obtain the maximum length between all the captions
         maximum_length = len(np.where(obj_to_img_include.cpu().numpy() == np.bincount(obj_to_img_include.cpu().numpy()).argmax())[0])
         output_stack, vector_length = [], []
-        # Add padding
+        # Add padding to the vectors
         for i in range(obj_to_img_include.max()+1):
             object_idx = np.where(obj_to_img_include.cpu().numpy()==i)[0]
             emb = valid_vectors[object_idx[0]: object_idx[-1]+1]
             vector_length.append(object_idx[-1]-object_idx[0]+1)
             output_stack.append(F.pad(emb, pad=(0, 0, 0, maximum_length - emb.shape[0])))
-
         vector_length  = torch.Tensor(vector_length)
+
         # Output of this line: batch x max_len x hidden_size
         output = torch.stack(output_stack, dim=0)
 
-        # Output of this line: batch * max_len x hidden_size
+        # Output of this line: batch * len x hidden_size. "len" depends on vector_length variable!!!!!!!
         output = pack_padded_sequence(output, vector_length, batch_first=True, enforce_sorted=False)
 
-        # Output of this line: batch * max_len x hidden_size
+        # Output of this line: batch * len x hidden_size. Hidden: Tuple: (num_layers * num_directions x batch x hidden_size, num_layers * num_directions x batch x hidden_size)
         final_output, hidden = self.rnn(output)
-        
+
         # Output of this line: batch x max_len x hidden_size
         final_output = pad_packed_sequence(final_output, batch_first=True)[0]
-        
         return final_output, hidden, include
-    
-    def encode_scene_graph(self, objects, relations, triples):
-        objs, triples_list, obj_to_img = [], [], []
-    
-        image_idx = len(objs)
-        # Add objects from the list
-        for obj in objects:
-            # 1 -> __<UKN>__
-            objs.append(1 if obj not in self.vocab['object_name_to_idx'] else self.vocab['object_name_to_idx'][obj])
-            obj_to_img.append(0)
-            
-        # Add dummy nodes   
-        # objs.append('__image__')
-        objs.append(0)
-        obj_to_img.append(0)
-        
-        # Add triples
-        for s, p, o in triples:
-            s_idx = s[1]
-            p_idx = 1 if p not in self.vocab['pred_name_to_idx'] else self.vocab['pred_name_to_idx'][p]
-            o_idx = o[1]
-            triples_list.append([s_idx, p_idx, o_idx])
-            
-        # Add dummy nodes      
-        for j in range(image_idx):
-            # triples_list.append([j, '__in_image__', image_idx])
-            triples_list.append([j, 0, image_idx])
-            
-        objs = torch.tensor(objs, dtype=torch.int64)
-        triples_list = torch.tensor(triples_list, dtype=torch.int64)
-        obj_to_img = torch.tensor(obj_to_img, dtype=torch.int64)
-        return objs, triples_list, obj_to_img
+
 
 def build_mlp(dim_list, activation='relu', batch_norm='none',
               dropout=0, final_nonlinearity=True):

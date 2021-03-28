@@ -142,7 +142,10 @@ class DecoderRNN(nn.Module):
         return class_prediction, xy_out, wh_out, hiddenRNN, topi
 
     def convert_to_coordinates(self, input_coordinates):
-
+        """
+        Function to convert the input coordinates to a x,y value.
+        The input coordinate is a value between [0...., xy_distribution_size**2]
+        """
         number_of_sectors = self.xy_distribution_size
 
         # First obtain the coordinates of the matrix

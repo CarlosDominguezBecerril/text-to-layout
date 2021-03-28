@@ -31,7 +31,7 @@ PIN_MEMORY = True
 # Dataset hyperparameters
 IMAGE_SIZE = (256, 256)
 INCLUDE_IMAGE = -1 # Include __image__ node to the lstm. Values: 1 to include __image__ otherwise any number.
-UQ_CAP = False # Use one caption or all the captions. Values: False -> All the captions. True -> One caption
+UQ_CAP = True # Use one caption or all the captions. Values: False -> All the captions. True -> One caption
 ALL_OBJECTS_VALID = True # Include all the objects nodes to the lstm. Values: True -> include all. False -> Only the selected ones.
 HIDDEN_SIZE = 128 
 MAX_OBJECTS = 10 # Maximum number of objects to use from the dataset
@@ -44,13 +44,13 @@ XY_DISTRIBUTION_SIZE = 32 # Size of grid use in the picture to approximate the b
 EPOCHS = 3 # Number of epochs to train
 PRINT_EVERY = 50 # Print information about the model every n steps
 IS_TRAINING = True # Set the model to training or validation. Values: True -> Training mode. False -> Validation mode
-CHECKPOINTS_PATH = "./checkpoints/1" # Path to save the epochs and average losses
+CHECKPOINTS_PATH = "./checkpoints/test" # Path to save the epochs and average losses
 
 # Validation
 CALCULATE_GAUSS_DICT = True # Gauss dictionary to sample objects. Values: True -> calculates and saves the gaussian dict. False -> Uses the file located at GAUSS_DICT_PATH  
 GAUSS_DICT_PATH = "./data/gaussian_dict_full.npy" # Path to the gauss dict
 SAVE_OUTPUT = True # Wheter to save or not the output (bbox and class for each picture) when validating. Values: True -> the output is saved. False -> The output is not saved
-VALIDATION_OUTPUT = "./evaluator_output/1" # Path to save the output (bbox and class for each picture)
+VALIDATION_OUTPUT = "./evaluator_output/test" # Path to save the output (bbox and class for each picture)
 EPOCH_VALIDATION = 28 # Number of the epoch to validate
 
 # Paths to the training development and validation dataset
