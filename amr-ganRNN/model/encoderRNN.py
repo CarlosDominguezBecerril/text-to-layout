@@ -32,12 +32,10 @@ class PreEncoderRNN(nn.Module):
             # the outputs of each RNN layer except the last layer
             self.rnn = nn.LSTM(self.ninput, self.nhidden,
                                self.nlayers, batch_first=True,
-                               dropout=self.drop_prob,
                                bidirectional=self.bidirectional)
         elif self.rnn_type == 'GRU':
             self.rnn = nn.GRU(self.ninput, self.nhidden,
                               self.nlayers, batch_first=True,
-                              dropout=self.drop_prob,
                               bidirectional=self.bidirectional)
         else:
             raise NotImplementedError

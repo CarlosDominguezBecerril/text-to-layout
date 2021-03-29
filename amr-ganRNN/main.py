@@ -32,7 +32,7 @@ PIN_MEMORY = True
 
 # Dataset hiperparameters
 IMAGE_SIZE = (256, 256)
-UQ_CAP = False
+UQ_CAP = True
 HIDDEN_SIZE = 256
 MAX_OBJECTS = 10
 NORMALIZE_INPUT = True
@@ -59,13 +59,13 @@ VALIDATION_OUTPUT = "./evaluator_output/3" # Without ending in /
 VOCAB_PATH = "./data/captions.pickle"
 
 # Paths tot he training and validation dataset
-GRAPHS_PATH_TRAIN = "./data/datasets/AMR2014train-dev-test/GraphTrainCorrected.json"
+GRAPHS_PATH_TRAIN = "./data/datasets/AMR2014train-dev-test/GraphTrain.json"
 INSTAN_PATH_TRAIN = "./data/datasets/COCO/annotations/instances_train2014.json"
 
-GRAPHS_PATH_DEV = "./data/datasets/AMR2014train-dev-test/GraphDevCorrected.json"
+GRAPHS_PATH_DEV = "./data/datasets/AMR2014train-dev-test/GraphDev.json"
 INSTAN_PATH_DEV = "./data/datasets/COCO/annotations/instances_train2014.json"
 
-GRAPHS_PATH_VAL = "./data/datasets/AMR2014train-dev-test/GraphTestCorrected.json"
+GRAPHS_PATH_VAL = "./data/datasets/AMR2014train-dev-test/GraphTest.json"
 INSTAN_PATH_VAL = "./data/datasets/COCO/annotations/instances_val2014.json"
 
 def generate_dataset(graph_path_train, instan_path_train, graph_path_test, instan_path_test, 

@@ -11,25 +11,21 @@ class Attention(nn.Module):
         self.v = nn.Linear(hidden_size, 1, bias = False)
         
     def forward(self, hidden, encoder_outputs):
-        #hidden = [batch size, dec hid dim]
-        #encoder_outputs = [src len, batch size, enc hid dim * 2]
+        #hidden = [batch size, hidden_size]
+        #encoder_outputs = [batch size, src len, hidden_size]
         
         batch_size = encoder_outputs.shape[0]
         src_len = encoder_outputs.shape[1]
         
         #repeat decoder hidden state src_len times
         hidden = hidden.unsqueeze(1).repeat(1, src_len, 1)
-        
-        #hidden = [batch size, src len, dec hid dim]
-        #encoder_outputs = [batch size, src len, enc hid dim * 2]
+        #hidden = [batch size, src_len, hidden_size]
 
         energy = self.attn(torch.cat((hidden, encoder_outputs), dim = 2))
-        
-        #energy = [batch size, src len, dec hid dim]
+        #energy = [batch size, src_len, hidden_size]
 
         attention = self.v(energy).squeeze(2)
-        
-        #attention= [batch size, src len]
+        #attention= [batch size, src_len]
         
         return F.softmax(attention, dim=1)
 

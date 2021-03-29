@@ -29,15 +29,21 @@ class Seq2Seq(nn.Module):
             self.encoder.eval()
             """    
     def change_is_training(self, is_training):
+        """
+        Function to update is_training value
+        """
         self.is_training = is_training
         self.decoder.is_training = is_training
 
     def convert_objects_to_list(self, coco_boxes, coco_ids, coco_to_img):
-        # Reorginize the target
-        # Longest sequence (so we can add padding after)
+        """
+        Function to reorganize the bounding boxes and classes
+        """
+        # Longest sequence. The minimum value is 3 <sos> class <eos>
         maximum = 3
         target_l_variables_list, target_x_variables_list, target_y_variables_list, target_w_variables_list, target_h_variables_list = [], [], [], [], []
         target_coco_to_img_list = []
+        # First split the class/bounding box in list according to which image belongs each one
         for i in range(coco_to_img.max()+1):
             object_idx = np.where(coco_to_img.cpu().numpy()==i)[0]
             target_l_variables_list.append(coco_ids[object_idx[0]: object_idx[-1]+1])
@@ -48,7 +54,7 @@ class Seq2Seq(nn.Module):
             target_coco_to_img_list.append(coco_to_img[object_idx[0]: object_idx[-1]+1])
             maximum = max(maximum, len(target_l_variables_list[-1]))
 
-        # Add padding
+        # here we add padding according to the caption that has the maximum number of objects
         target_l_variables, target_x_variables, target_y_variables, target_w_variables, target_h_variables = [], [], [], [], []
         target_coco_to_img = []
         for i in range(len(target_l_variables_list)):
@@ -68,6 +74,7 @@ class Seq2Seq(nn.Module):
         target_h_variables = torch.stack(target_h_variables)
         target_coco_to_img = torch.stack(target_coco_to_img)
         
+        # Convert the x, y coordinates to coordinates in the grid
         target_x_coordinates = torch.zeros((target_x_variables.shape[0], target_x_variables.shape[1]))
         target_y_coordinates = torch.zeros((target_y_variables.shape[0], target_y_variables.shape[1]))
         for i in range(target_x_variables.shape[1]):
@@ -78,7 +85,7 @@ class Seq2Seq(nn.Module):
 
         target_x_variables = target_x_coordinates
         target_y_variables = target_y_coordinates
-        
+        # Convert to cuda   
         if torch.cuda.is_available():
             target_l_variables, target_x_variables, target_y_variables, target_w_variables, target_h_variables, target_coco_to_img = target_l_variables.cuda(), target_x_variables.cuda(), target_y_variables.cuda(), target_w_variables.cuda(), target_h_variables.cuda(), target_coco_to_img.cuda()
         return target_l_variables, target_x_variables, target_y_variables, target_w_variables, target_h_variables, target_coco_to_img
@@ -94,63 +101,47 @@ class Seq2Seq(nn.Module):
         # Encode the input
         encoder_output, encoder_hidden, include = self.encoder(captions_padded, captions_length)
         
+        # Concatenate directions of the bidirectional lstm
         decoder_hidden = tuple([self._cat_directions(h) for h in encoder_hidden])
-
-        # context = decoder_hidden[0]
-
+        
+        # Obtain the batch size
         batch_size = decoder_hidden[0].size(1)
 
-        # Maximum target_length (12)
-        if self.is_training:
-            trg_len = target_l.size(1)
-        else:
-            trg_len = min(target_l.size(1), self.max_len)
+        # Establish the longest length of the input
+        trg_len = target_l.size(1)
 
-        # tensor to store decoder outputs
-        if self.is_training:
-            outputs_class = torch.zeros(trg_len, target_l.size(0), self.decoder.output_size)
-            outputs_bbox = torch.zeros(trg_len, target_l.size(0), 4)
-            outputs_bbox_xy = torch.zeros(trg_len, target_l.size(0), self.xy_distribution_size ** 2)
-            target_xy = torch.zeros(trg_len, target_l.size(0))
-            # outputs_bbox_xy = torch.zeros(trg_len, batch_size, 2)
-        else:
-            outputs_class = torch.zeros(trg_len, batch_size, self.decoder.output_size)
-            outputs_bbox = torch.zeros(trg_len, batch_size, 4)
-            outputs_bbox_xy = torch.zeros(trg_len, batch_size, self.xy_distribution_size ** 2)
-            target_xy = torch.zeros(trg_len, batch_size)
-            # outputs_bbox_xy = torch.zeros(trg_len, batch_size, 2)
+        # tensors to store the outputs of the decoder
+        outputs_class = torch.zeros(trg_len, target_l.size(0), self.decoder.output_size)
+        outputs_bbox = torch.zeros(trg_len, target_l.size(0), 4)
+        outputs_bbox_xy = torch.zeros(trg_len, target_l.size(0), self.xy_distribution_size ** 2)
+        target_xy = torch.zeros(trg_len, target_l.size(0))
         
+        # Convert to cuda
         if torch.cuda.is_available():
             outputs_class = outputs_class.cuda()
             outputs_bbox = outputs_bbox.cuda()
             outputs_bbox_xy = outputs_bbox_xy.cuda()
             target_xy = target_xy.cuda()
 
-        # Obtain <sos> label
-        if self.is_training:
-            trg_l = target_l[:, 0] # <sos>
-        else:
-            trg_l = torch.ones(batch_size, dtype=torch.long)
-            if torch.cuda.is_available():
-                trg_l = trg_l.cuda()
+        # Create the <sos> token
+        trg_l = torch.ones(batch_size, dtype=torch.long)
+        if torch.cuda.is_available():
+            trg_l = trg_l.cuda()
         
-        # Obtain bbox for each label (all zeros for <sos>)
-        if self.is_training:
-            trg_x, trg_y, trg_w, trg_h = target_x[:, 0], target_y[:, 0], target_w[:, 0], target_h[:, 0]
-        else:
-            trg_x = torch.zeros(batch_size, dtype=torch.float)
-            trg_y = torch.zeros(batch_size, dtype=torch.float)
-            trg_w = torch.zeros(batch_size, dtype=torch.float)
-            trg_h = torch.zeros(batch_size, dtype=torch.float)
-            if torch.cuda.is_available():
-                trg_x = trg_x.cuda()
-                trg_y = trg_y.cuda()
-                trg_w = trg_w.cuda()
-                trg_h = trg_h.cuda()
+        # Bbox for <sos> (x, y, w, h) = (0, 0, 0, 0)
+        trg_x = torch.zeros(batch_size, dtype=torch.float)
+        trg_y = torch.zeros(batch_size, dtype=torch.float)
+        trg_w = torch.zeros(batch_size, dtype=torch.float)
+        trg_h = torch.zeros(batch_size, dtype=torch.float)
+        if torch.cuda.is_available():
+            trg_x = trg_x.cuda()
+            trg_y = trg_y.cuda()
+            trg_w = trg_w.cuda()
+            trg_h = trg_h.cuda()
 
-        teacher_force = random.random() < 0.5
-        teacher_force = True
-        if self.is_training and self.teacher_learning and teacher_force:
+        # When training retrieve the next ground truth class and bbox to apply teacher forcing
+        # When validating we don't have this information so we set next_l and next_xy to None
+        if self.is_training and self.teacher_learning:
             next_l = torch.FloatTensor(target_l.size(0), self.output_l_size)
             if torch.cuda.is_available():
                 next_l = next_l.cuda()
@@ -167,39 +158,30 @@ class Seq2Seq(nn.Module):
 
         # Column by column
         for di in range(1, trg_len):
-            # Decoder
+            # Obtain the output of the decoder
             class_prediction, xy_out, wh_out, decoder_hidden, xy_coordinates = self.decoder(trg_l, trg_x, trg_y, trg_w, trg_h, decoder_hidden, encoder_output, next_l=next_l, next_xy=next_xy)
 
+            # Save the prediction
             outputs_class[di] = class_prediction
             outputs_bbox[di, :, 2:] = wh_out
 
-            # https://pytorch-nlp-tutorial-ny2018.readthedocs.io/en/latest/day2/sampling.html
+            # Sample if the xy_coordinates are not calculated
             if xy_coordinates == None:
                 xy_distance = xy_out.div(self.temperature).exp()
                 xy_topi = torch.multinomial(xy_distance, 1)
                 xy_coordinates = self.convert_to_coordinates(xy_topi)
-            # xy_coordinates = self.convert_to_coordinates(xy_out.argmax(1).unsqueeze(1))
 
-            outputs_bbox[di, :, :2] = xy_coordinates
-            outputs_bbox_xy[di] = xy_out
-            # outputs_bbox_xy[di] = next_xy
-
-            """
-            outputs_class[di] = next_l
-            outputs_bbox[di, :, 0] = target_x[:, di]
-            outputs_bbox[di, :, 1] = target_y[:, di]
-            outputs_bbox[di, :, 2] = target_w[:, di]
-            outputs_bbox[di, :, 3] = target_h[:, di]
-            """
-
+            # Save the prediction
+            outputs_bbox[di, :, :2] = xy_coordinates # (x, y) coordinates
+            outputs_bbox_xy[di] = xy_out # xy probability distribution
+            
+            # For calculating afterwards the losses we save the target again
             target_xy[di] = self.convert_from_coordinates(torch.cat((target_x[:, di].unsqueeze(1), target_y[:, di].unsqueeze(1)), dim=1)).argmax(1)
 
-            # decide if we are going to use teacher forcing or not
-            teacher_force = random.random() < 0.5
-            teacher_force = True
-
+            # When training use the real values of the step for the next one
+            # When validating use the predicted values of the step for the next one
             top1 = class_prediction.argmax(1)
-            if self.is_training and self.teacher_learning and teacher_force:
+            if self.is_training and self.teacher_learning:
                 trg_l, trg_x, trg_y, trg_w, trg_h = target_l[:, di], target_x[:, di], target_y[:, di], target_w[:, di], target_h[:, di]
             else:
                 trg_l = top1
@@ -207,8 +189,9 @@ class Seq2Seq(nn.Module):
                 trg_y = xy_coordinates[:, 1]
                 trg_w = wh_out[:, 0]
                 trg_h = wh_out[:, 1]
-            
-            if self.is_training and self.teacher_learning and teacher_force:
+            # When training retrieve the next ground truth class and bbox to apply teacher forcing
+            # When validating we don't have this information so we set next_l and next_xy to None
+            if self.is_training and self.teacher_learning:
                 if di == trg_len-1:
                     next_l = None
                     next_xy = None
@@ -228,13 +211,13 @@ class Seq2Seq(nn.Module):
                 next_xy = None
 
             if self.is_training:
-                # Calculate some stats about the output (correct matching without taking into account the padding)
+                # Calculate some stats about the output (correct matching without taking into account the padding)                target_tensor = target_l[:, di]
                 target_tensor = target_l[:, di]
                 non_padding = target_tensor.ne(self.vocab['word2index']['<pad>'])
                 l_correct = top1.view(-1).eq(target_tensor).masked_select(non_padding).sum().item()
                 l_match += l_correct
                 total += non_padding.sum().item()
-
+        # Return all the information
         final_output = {
             "output_class": outputs_class,
             "output_bbox": outputs_bbox,
@@ -264,10 +247,29 @@ class Seq2Seq(nn.Module):
         # We make a matrix to make the operations easier
         # distribution = [batch_size, xy_distribution_size, xy_distribution_size]
 
-        # Convert from 0, 1 to 0, xy_distribution_size
+        # Convert coordinates from range [0, 1] to range [0, xy_distribution_size]
         input_coordinates[:, 0] = (input_coordinates[: ,0] * self.xy_distribution_size).clamp(0, self.xy_distribution_size-1)
         input_coordinates[:, 1] = (input_coordinates[: ,1] * self.xy_distribution_size).clamp(0, self.xy_distribution_size-1)
 
+        # Obtain the distribution. All zeros except the coordinate that is a 1
+        # Ex.
+        # Suppose that this is our matrix
+        # 0 | 1 | 2 | 3
+        # - - - - - - -
+        # 4 | 5 | 6 | 7
+        # - - - - - - -   
+        # 8 | 9 | 10 | 11
+        # - - - - - - -
+        # 12 | 13 | 14 | 15
+        #
+        # The output for (0.2, 0.2)
+        # 0 | 0 | 0 | 0
+        # - - - - - - -
+        # 0 | 1 | 0 | 0
+        # - - - - - - -
+        # 0 | 0 | 0 | 0
+        # - - - - - - -
+        # 0 | 0 | 0 | 0
         input_coordinates = input_coordinates.long()
         for i in range(input_coordinates.shape[0]):
             distribution[i, input_coordinates[i, 1], input_coordinates[i , 0]] = 1
@@ -275,9 +277,15 @@ class Seq2Seq(nn.Module):
         return torch.flatten(distribution, 1)
 
     def convert_to_coordinates(self, input_coordinates):
+        """
+        Function to convert the input coordinates to a x,y value.
+        The input coordinate is a value between [0...., xy_distribution_size**2]
+        """
         # To obtain y coordinate -> (input_coordinates[i] / number of sectors
         # ### Check if there is an easier way to calculate x
         # To obtain x coordinate -> ((input_coordinates[i] * number_of_sectors) % (number_of_sectors ** 2)) /  number_of_sectors
+
+        # Examples
         # 0 | 1 | 2 | 3
         # - - - - - - -
         # 4 | 5 | 6 | 7
