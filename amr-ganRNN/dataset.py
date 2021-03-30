@@ -15,6 +15,7 @@ class CocoDataset(Dataset):
         self.graphs_path = graphs_path
         self.instan_path = instan_path
 
+        # Normalize input
         self.normalize = normalize
 
         # image_size
@@ -24,6 +25,7 @@ class CocoDataset(Dataset):
         self.uq_cap = uq_cap
         self.max_objects = max_objects
 
+        # Load all the captions
         graph_data = None
         with open(self.graphs_path, "r") as json_file:
             graph_data = json.load(json_file)
@@ -35,16 +37,19 @@ class CocoDataset(Dataset):
 
             for image_id in graph_data.keys():
                 for i in range(graph_data[image_id]['valid_captions']):
-                    # One caption per graph (the first one)
+                    # If we are using one caption take the first one
                     if self.uq_cap:
                         image_id_c = str(image_id)
                     else:
-                    # All the captions
+                        # All the captions
+                        # Each image can have MORE than one caption therefore we create strings
+                        # of type "00001-1" for the first caption "00001-2" for the second caption
+                        # and so on
                         image_id_c  = str(image_id) + "-" + str(i)
                     self.image_id_to_caption[image_id_c] = self.normalize_string(graph_data[image_id]['graphs'][i]['caption'])
                     self.image_ids.append(image_id_c)
 
-                    # After adding one caption break
+                    # if we are using one caption after adding one break
                     if self.uq_cap:
                         break
 
@@ -86,6 +91,7 @@ class CocoDataset(Dataset):
         else:
             self.vocab = vocab
 
+        # If we do not have a dictionary create one
         if cap_lang == None:
             self.cap_lang = Lang('caption')
 
@@ -95,6 +101,7 @@ class CocoDataset(Dataset):
                 for image_id, caption in self.image_id_to_caption.items():
                     self.cap_lang.index_cap_words(caption)
             else:
+                # Generate the vocabulary
                 for image_id, caption in self.image_id_to_caption.items():
                     self.cap_lang.index_words(caption)
         else:
@@ -191,6 +198,7 @@ class CocoDataset(Dataset):
         return boxes, ids
     
     def indexes_from_sentence(self, lang, sentence):
+        # Tokenize a sentece
         if "<sos>" in lang.word2index:
             seq = [lang.word2index["<sos>"]]
         else:
@@ -211,10 +219,12 @@ class CocoDataset(Dataset):
         return len(self.image_ids)
     
     def get_image_id(self, idx):
+        # This function returns the image_id at position idx
         return self.image_ids[idx]
     
-    def get_image_caption(self, idx):
-        return self.image_id_to_caption[idx]
+    def get_image_caption(self, image_id):
+        # this function return the caption given the image_id
+        return self.image_id_to_caption[image_id]
 
     def __getitem__(self, idx):        
         # Load the information
@@ -229,8 +239,8 @@ class CocoDataset(Dataset):
         tokenized_caption = torch.LongTensor(tokenized_caption)
         return tokenized_caption, boxes_coco, ids_coco, out_idx
 
-# Pad a with the PAD symbol
 def pad_seq(seq, max_length, pad_token):
+    # Add padding to the sequence with a maximum of max_length
     seq = torch.cat((seq, torch.LongTensor([pad_token for i in range(max_length - len(seq))], device=seq.device)))
     return seq
 

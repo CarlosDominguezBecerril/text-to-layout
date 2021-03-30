@@ -22,6 +22,7 @@ class Seq2Seq(nn.Module):
         self.pretrained_encoder = pretrained_encoder
 
         if self.pretrained_encoder:
+            # Remove the comment to freeze the pretrained encoder
             pass
             """
             for p in self.encoder.parameters():

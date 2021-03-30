@@ -47,13 +47,13 @@ IS_TRAINING = True # Set the model to training or validation. Values: True -> Tr
 CHECKPOINTS_PATH = "./checkpoints/test" # Path to save the epochs and average losses
 
 # Validation
-CALCULATE_GAUSS_DICT = True # Gauss dictionary to sample objects. Values: True -> calculates and saves the gaussian dict. False -> Uses the file located at GAUSS_DICT_PATH  
+CALCULATE_GAUSS_DICT = True # Gauss dictionary with means and std for the objects in the dataset Values: True -> calculates and saves the gaussian dict. False -> Uses the file located at GAUSS_DICT_PATH  
 GAUSS_DICT_PATH = "./data/gaussian_dict_full.npy" # Path to the gauss dict
-SAVE_OUTPUT = True # Wheter to save or not the output (bbox and class for each picture) when validating. Values: True -> the output is saved. False -> The output is not saved
+SAVE_OUTPUT = True # Whether to save or not the output (bbox and class for each picture) when validating. Values: True -> the output is saved. False -> The output is not saved
 VALIDATION_OUTPUT = "./evaluator_output/test" # Path to save the output (bbox and class for each picture)
 EPOCH_VALIDATION = 28 # Number of the epoch to validate
 
-# Paths to the training development and validation dataset
+# Paths to the training, development and validation dataset
 GRAPHS_PATH_TRAIN = "./data/datasets/AMR2014train-dev-test/GraphTrain.json"
 INSTAN_PATH_TRAIN = "./data/datasets/COCO/annotations/instances_train2014.json"
 
@@ -176,7 +176,6 @@ if __name__ == "__main__":
     train_dl, val_dl, vocab, train_ds, val_ds = generate_dataset(GRAPHS_PATH_TRAIN, INSTAN_PATH_TRAIN, valg, vali, uq_cap=UQ_CAP, batch_size=BATCH_SIZE, max_objects=MAX_OBJECTS)
     
     # Generate the seq2seq model
-
     encoder, decoder = generate_encoder(vocab, hidden_size=HIDDEN_SIZE), generate_decoder(vocab, IS_TRAINING, xy_distribution_size=XY_DISTRIBUTION_SIZE, use_attention=USE_ATTENTION, hidden_size=HIDDEN_SIZE)
     
     # +2 objects because we need to include the <sos> and <eos>

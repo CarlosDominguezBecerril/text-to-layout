@@ -9,8 +9,6 @@ import collections
 
 import numpy as np
 
-from loss import xy_distribution_loss
-
 class Evaluator():
     def __init__(self, seq2seq, loss_class, loss_bbox_xy, loss_bbox_wh, vocab, gaussian_dict=None, validator_output_path="./", save_output=False, verbose=False, name="DEVELOPMENT"):
         self.seq2seq = seq2seq
@@ -25,9 +23,17 @@ class Evaluator():
         self.name = name
 
     def convert_index_to_word(self, lxywh):
+        """
+        This function converts indexes of coco to the corresponding word
+        """
         return [(self.vocab['index2wordCoco'][l[-1]]) for l in lxywh]
     
     def clean_output(self, l, x, y, w, h):
+        """
+        This function cleans the output.
+        1. Converts tensors to float
+        2. Remove padding, <sos>, <eos>, <ukn> tokens
+        """
         output = []
         for i in range(len(l)):
             if l[i] in [0, 1, 2, 3]:
@@ -36,6 +42,9 @@ class Evaluator():
         return output
     
     def filter_redundant_labels(self, predicted):
+        """
+        This function filters redundant labels using the gaussian dict.
+        """
         ls = np.array([i[-1] for i in predicted])
         # filter redundant labels
         counter = collections.Counter(ls)
@@ -62,6 +71,7 @@ class Evaluator():
     @torch.no_grad()
     def evaluate(self, dl, ds, epoch, output_folder):
         
+        # Set the model to validation
         self.seq2seq.eval()
         self.seq2seq.change_is_training(False)
         self.seq2seq.teacher_learning = False
@@ -75,7 +85,7 @@ class Evaluator():
             captions_padded, captions_length, coco_boxes, coco_ids, coco_to_img, all_idx = batch
             outputs = self.seq2seq(captions_padded, captions_length, coco_boxes, coco_ids, coco_to_img)
             
-            # Class LOSS
+            # Obtain the loss of the class
             output_dim = outputs['output_class'].shape[-1]
             output_class_clean = outputs['output_class'][1:]
             outputs_class =  output_class_clean.view(-1, output_dim)
@@ -87,16 +97,16 @@ class Evaluator():
 
             class_loss = self.loss_class(outputs_class, target_l_cleaned)
 
-            # BBOX LOSS
-            # cross entropy xy <start>
+            # Obtain the loss of the the bounding box
+            # cross entropy xy
             output_xy_dim = outputs['outputs_bbox_xy'].shape[-1]
             output_xy_clean = outputs['outputs_bbox_xy'][1:]
             outputs_xy = output_xy_clean.view(-1, output_xy_dim)
 
             target_xy = outputs['target_xy'][1:].contiguous().view(-1).long()
             xy_prob_loss = self.loss_bbox_xy(outputs_xy, target_xy)
-            # cross entropy xy <end>
-
+            
+            # MSE of xywh
             output_dim = outputs['output_bbox'].shape[-1]
             output_bbox_clean = outputs['output_bbox'][1:]
             outputs_bbox =  output_bbox_clean.view(-1, output_dim)
@@ -133,23 +143,16 @@ class Evaluator():
             if torch.cuda.is_available():
                 output_compare = output_compare.cuda()
 
-            # mask padding and eos of target_xywh and output_bbox
+            # mask for padding and <eos> of target_xywh and output_bbox
             flatten = torch.flatten(output_compare)
 
-            mask = (flatten != 0).float()
+            mask = (flatten != 0).float() * (flatten != 2).float()
 
+            # Convert the mask to cuda
             if torch.cuda.is_available():
                 mask = mask.cuda()
-            """
-            wh_loss, xy_loss = 0, 0
-            bbox_loss = F.mse_loss(outputs_bbox, target_xywh, reduction="none").sum(1)
-            bbox_loss = bbox_loss * mask # mask to remove padding
-            mask_sum = torch.sum(mask)
-            if int(mask_sum.item()) == 0:
-                bbox_loss = torch.sum(bbox_loss)
-            else:
-                bbox_loss = torch.sum(bbox_loss) / mask_sum
-            """
+
+            # Obtain the losses
             wh_loss, xy_loss = self.loss_bbox_wh(outputs_bbox, target_xywh, mask=mask)
             wh_loss, xy_loss =  wh_loss * 10, xy_loss * 10
             
@@ -162,6 +165,7 @@ class Evaluator():
             epoch_bloss_xy += xy_prob_loss.item()
             epoch_bloss_xy_MSE += xy_loss.item()
             
+            # if save_output clean the prediction and add the output to a dictionary
             if self.VERBOSE or self.save_output:                
                 for idx in range(max(coco_to_img)+1):
                     image_id = ds.get_image_id(all_idx[idx])
@@ -179,17 +183,17 @@ class Evaluator():
                         print("predicted2", self.convert_index_to_word(cleaned_output_predicted))
                         print(" ")
                     
+                    # If more than one objects are predicted save the prediction
                     if self.save_output:
                         if len(cleaned_output_predicted) > 0:
                             bbox_and_ls_outputs[image_id] = cleaned_output_predicted
             step += 1
+        # Save the average losses
         with open(output_folder + "/" + self.name + "losses" + str(epoch)+ ".txt", "w") as f:
-            # We need to substract one to the dataloader because we delete the last batch.
-            # Need to be fixed. Error in objgan code.
             info = "{} {} {} {}".format(str(epoch_lloss/(len(dl))), str(epoch_bloss_xy/(len(dl))), str(epoch_bloss_wh/(len(dl))), str(epoch_bloss_xy_MSE/(len(dl))))
             f.write(info)
         
-            
+        # Save the output (bbox and class for each picture) in a json file 
         if self.save_output: 
             with open(self.validator_output_path + "/" + self.name + "epoch" + str(epoch)+".json", "w") as f:
                 json.dump(bbox_and_ls_outputs, f)
