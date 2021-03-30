@@ -7,11 +7,7 @@ amr-ganGCN/__pycache__
 amr-ganGCN/.vscode
 amr-ganGCN/.ipynb_checkpoints
 amr-ganGCN/evaluator_output
-amr-ganGCN/Notebook/.ipynb_checkpoints
-amr-ganGCN/Notebook/garbage
-amr-ganGCN/Notebook/heat-map
-amr-ganGCN/Notebook/metrics
-amr-ganGCN/Notebook/pictures_output
+
 
 amr-ganRNN/checkpoints
 amr-ganRNN/data
@@ -20,8 +16,9 @@ amr-ganRNN/__pycache__
 amr-ganRNN/.vscode
 amr-ganRNN/.ipynb_checkpoints
 amr-ganRNN/evaluator_output
-amr-ganRNN/Notebook/.ipynb_checkpoints
-amr-ganRNN/Notebook/garbage
-amr-ganRNN/Notebook/heat-map
-amr-ganRNN/Notebook/metrics
-amr-ganRNN/Notebook/pictures_output
+
+Notebook/.ipynb_checkpoints
+Notebook/garbage
+Notebook/heat-map
+Notebook/metrics
+Notebook/pictures_output
