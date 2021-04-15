@@ -32,7 +32,7 @@ PIN_MEMORY = True
 
 # Dataset hyperparameters
 IMAGE_SIZE = (256, 256)
-UQ_CAP = True # Use one caption or all the captions. Values: False -> All the captions. True -> One caption
+UQ_CAP = False # Use one caption or all the captions. Values: False -> All the captions. True -> One caption
 HIDDEN_SIZE = 256
 MAX_OBJECTS = 10 # Maximum number of objects to use from the dataset
 NORMALIZE_INPUT = True # Normalize the pictures to range [0, 1].
@@ -43,8 +43,8 @@ XY_DISTRIBUTION_SIZE = 32 # Size of grid use in the picture to approximate the b
 # Training
 EPOCHS = 3 # Number of epochs to train
 PRINT_EVERY = 50 # Print information about the model every n steps
-IS_TRAINING = True # Set the model to training or validation. Values: True -> Training mode. False -> Validation mode
-CHECKPOINTS_PATH = "./checkpoints/3" # Path to save the epochs and average losses
+IS_TRAINING = False # Set the model to training or validation. Values: True -> Training mode. False -> Validation mode
+CHECKPOINTS_PATH = "./checkpoints/2" # Path to save the epochs and average losses
 PRETRAINED_ENCODER = True # Use the pretrained encoder
 VOCAB_PATH = "./data/captions.pickle" # Path of the pretrained vocab
 ENCODER_PATH = "./data/text_encoder100.pth" # Path of the pretrained encoder
@@ -52,9 +52,9 @@ ENCODER_PATH = "./data/text_encoder100.pth" # Path of the pretrained encoder
 # Validation
 CALCULATE_GAUSS_DICT = True # Gauss dictionary with means and std for the objects in the dataset. Values: True -> calculates and saves the gaussian dict. False -> Uses the file located at GAUSS_DICT_PATH  
 GAUSS_DICT_PATH = "./data/gaussian_dict_full.npy" # Path to the gauss dict
-VALIDATION_OUTPUT = "./evaluator_output/3" # Path to save the output (bbox and class for each picture)
+VALIDATION_OUTPUT = "./evaluator_output/2" # Path to save the output (bbox and class for each picture)
 SAVE_OUTPUT = True # Whether to save or not the output (bbox and class for each picture) when validating. Values: True -> the output is saved. False -> The output is not saved
-EPOCH_VALIDATION = 28 # Number of the epoch to validate
+EPOCH_VALIDATION = 26 # Number of the epoch to validate
 
 # Paths to the training, development and validation dataset
 GRAPHS_PATH_TRAIN = "./data/datasets/AMR2014train-dev-test/GraphTrain.json"

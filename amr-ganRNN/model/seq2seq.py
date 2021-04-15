@@ -23,12 +23,10 @@ class Seq2Seq(nn.Module):
 
         if self.pretrained_encoder:
             # Remove the comment to freeze the pretrained encoder
-            pass
-            """
             for p in self.encoder.parameters():
                 p.requires_grad = False
             self.encoder.eval()
-            """    
+               
     def change_is_training(self, is_training):
         """
         Function to update is_training value
