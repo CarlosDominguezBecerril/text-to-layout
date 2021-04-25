@@ -1,21 +1,21 @@
 *.json
 
-amr-ganGCN/checkpoints
-amr-ganGCN/data
-amr-ganGCN/model/__pycache__
-amr-ganGCN/__pycache__
-amr-ganGCN/.vscode
-amr-ganGCN/.ipynb_checkpoints
-amr-ganGCN/evaluator_output
+GCN2LY/checkpoints
+GCN2LY/data
+GCN2LY/model/__pycache__
+GCN2LY/__pycache__
+GCN2LY/.vscode
+GCN2LY/.ipynb_checkpoints
+GCN2LY/evaluator_output
 
 
-amr-ganRNN/checkpoints
-amr-ganRNN/data
-amr-ganRNN/model/__pycache__
-amr-ganRNN/__pycache__
-amr-ganRNN/.vscode
-amr-ganRNN/.ipynb_checkpoints
-amr-ganRNN/evaluator_output
+RNN2LY/checkpoints
+RNN2LY/data
+RNN2LY/model/__pycache__
+RNN2LY/__pycache__
+RNN2LY/.vscode
+RNN2LY/.ipynb_checkpoints
+RNN2LY/evaluator_output
 
 Notebook/.ipynb_checkpoints
 Notebook/garbage
