@@ -46,6 +46,7 @@ PRINT_EVERY = 50 # Print information about the model every n steps
 IS_TRAINING = False # Set the model to training or validation. Values: True -> Training mode. False -> Validation mode
 CHECKPOINTS_PATH = "./checkpoints/2" # Path to save the epochs and average losses
 PRETRAINED_ENCODER = True # Use the pretrained encoder
+FREEZE_ENCODER = True # Freeze the weights of the encoder
 VOCAB_PATH = "./data/captions.pickle" # Path of the pretrained vocab
 ENCODER_PATH = "./data/text_encoder100.pth" # Path of the pretrained encoder
 
@@ -195,7 +196,7 @@ if __name__ == "__main__":
         encoder.load_state_dict(torch.load(ENCODER_PATH, map_location=lambda storage, loc: storage))
 
     # +2 objects because we need to include the <sos> and <eos>
-    seq2seq = Seq2Seq(encoder, decoder, vocab, IS_TRAINING, max_len=MAX_OBJECTS+2, pretrained_encoder=PRETRAINED_ENCODER)
+    seq2seq = Seq2Seq(encoder, decoder, vocab, IS_TRAINING, max_len=MAX_OBJECTS+2, pretrained_encoder=PRETRAINED_ENCODER, freeze_encoder=FREEZE_ENCODER)
     seq2seq = to_device(seq2seq, device)
 
     # Generate the losses

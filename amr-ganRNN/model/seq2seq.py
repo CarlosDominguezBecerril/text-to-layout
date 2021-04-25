@@ -8,7 +8,7 @@ import random
 
 class Seq2Seq(nn.Module):
 
-    def __init__(self, encoder, decoder, vocab, is_training, max_len=12, teacher_learning=True, pretrained_encoder=False):
+    def __init__(self, encoder, decoder, vocab, is_training, max_len=12, teacher_learning=True, pretrained_encoder=False, freeze_encoder=False):
         super(Seq2Seq, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
@@ -20,9 +20,9 @@ class Seq2Seq(nn.Module):
         self.temperature = 0.4
         self.xy_distribution_size = self.decoder.xy_distribution_size
         self.pretrained_encoder = pretrained_encoder
+        self.freeze_encoder = freeze_encoder
 
-        if self.pretrained_encoder:
-            # Remove the comment to freeze the pretrained encoder
+        if self.pretrained_encoder and self.freeze_encoder:
             for p in self.encoder.parameters():
                 p.requires_grad = False
             self.encoder.eval()

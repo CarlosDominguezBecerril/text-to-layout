@@ -147,7 +147,7 @@ class SupervisedTrainer():
             self.seq2seq.teacher_learning = True
 
             # Remove the comments if you want to freeze the pretrained encoder.
-            if self.seq2seq.pretrained_encoder:
+            if self.seq2seq.pretrained_encoder and self.seq2seq.freeze_encoder:
                 self.seq2seq.encoder.eval()
             
             epoch_loss_total = 0  # Reset every epoch
