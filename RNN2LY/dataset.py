@@ -9,10 +9,10 @@ import os
 
 class CocoDataset(Dataset):
     
-    def __init__(self, graphs_path, instan_path, normalize=True, vocab=None, image_size=(256, 256), uq_cap=False, max_objects=10, idx2word=None, word2idx=None, cap_lang=None):
+    def __init__(self, dataset_path, instan_path, normalize=True, vocab=None, image_size=(256, 256), uq_cap=False, max_objects=10, idx2word=None, word2idx=None, cap_lang=None):
         
         # Paths of the file
-        self.graphs_path = graphs_path
+        self.dataset_path = dataset_path
         self.instan_path = instan_path
 
         # Normalize input
@@ -26,17 +26,17 @@ class CocoDataset(Dataset):
         self.max_objects = max_objects
 
         # Load all the captions
-        graph_data = None
-        with open(self.graphs_path, "r") as json_file:
-            graph_data = json.load(json_file)
+        dataset_data = None
+        with open(self.dataset_path, "r") as json_file:
+            dataset_data = json.load(json_file)
 
             self.image_ids = []
             self.image_id_to_filename = {}
             self.image_id_to_size = {}
             self.image_id_to_caption = {}
 
-            for image_id in graph_data.keys():
-                for i in range(graph_data[image_id]['valid_captions']):
+            for image_id in dataset_data.keys():
+                for i in range(dataset_data[image_id]['valid_captions']):
                     # If we are using one caption take the first one
                     if self.uq_cap:
                         image_id_c = str(image_id)
@@ -46,7 +46,7 @@ class CocoDataset(Dataset):
                         # of type "00001-1" for the first caption "00001-2" for the second caption
                         # and so on
                         image_id_c  = str(image_id) + "-" + str(i)
-                    self.image_id_to_caption[image_id_c] = self.normalize_string(graph_data[image_id]['graphs'][i]['caption'])
+                    self.image_id_to_caption[image_id_c] = self.normalize_string(dataset_data[image_id]['graphs'][i]['caption'])
                     self.image_ids.append(image_id_c)
 
                     # if we are using one caption after adding one break
@@ -54,8 +54,8 @@ class CocoDataset(Dataset):
                         break
 
                 # add information about the picture
-                self.image_id_to_filename[str(image_id)] = graph_data[image_id]['image_filename']
-                width, height = graph_data[image_id]['width'], graph_data[image_id]['height']
+                self.image_id_to_filename[str(image_id)] = dataset_data[image_id]['image_filename']
+                width, height = dataset_data[image_id]['width'], dataset_data[image_id]['height']
                 self.image_id_to_size[str(image_id)] = (width, height)
 
         vocab_remove = False 

@@ -58,22 +58,22 @@ SAVE_OUTPUT = True # Whether to save or not the output (bbox and class for each 
 EPOCH_VALIDATION = 26 # Number of the epoch to validate
 
 # Paths to the training, development and validation dataset
-GRAPHS_PATH_TRAIN = "./data/datasets/AMR2014train-dev-test/GraphTrain.json"
+DATASET_PATH_TRAIN = "./data/datasets/AMR2014train-dev-test/GraphTrain.json"
 INSTAN_PATH_TRAIN = "./data/datasets/COCO/annotations/instances_train2014.json"
 
-GRAPHS_PATH_DEV = "./data/datasets/AMR2014train-dev-test/GraphDev.json"
+DATASET_PATH_DEV = "./data/datasets/AMR2014train-dev-test/GraphDev.json"
 INSTAN_PATH_DEV = "./data/datasets/COCO/annotations/instances_train2014.json"
 
-GRAPHS_PATH_VAL = "./data/datasets/AMR2014train-dev-test/GraphTest.json"
+DATASET_PATH_VAL = "./data/datasets/AMR2014train-dev-test/GraphTest.json"
 INSTAN_PATH_VAL = "./data/datasets/COCO/annotations/instances_val2014.json"
 
-def generate_dataset(graph_path_train, instan_path_train, graph_path_test, instan_path_test, 
+def generate_dataset(dataset_path_train, instan_path_train, dataset_path_test, instan_path_test, 
                     normalize_input=True, uq_cap=False, max_objects=10,
                     shuffle=True, num_workers=4, pin_memory=True, batch_size=16, idx2word=None, word2idx=None):
 
     # Create the dataset
     print("Loading training dataset")
-    train_ds = CocoDataset(graph_path_train, instan_path_train, normalize=normalize_input, uq_cap=uq_cap, max_objects=max_objects, idx2word=idx2word, word2idx=word2idx)
+    train_ds = CocoDataset(dataset_path_train, instan_path_train, normalize=normalize_input, uq_cap=uq_cap, max_objects=max_objects, idx2word=idx2word, word2idx=word2idx)
 
     if IS_TRAINING:
         print("Counting valid objects...")
@@ -84,7 +84,7 @@ def generate_dataset(graph_path_train, instan_path_train, graph_path_test, insta
                 train_ds.vocab['word2count'][train_ds.vocab['index2word'][j.item()]] += 1
                 
     print("Loading validation dataset")
-    val_ds = CocoDataset(graph_path_test, instan_path_test, normalize=normalize_input, vocab=train_ds.vocab, uq_cap=uq_cap, max_objects=max_objects, cap_lang=train_ds.cap_lang)
+    val_ds = CocoDataset(dataset_path_test, instan_path_test, normalize=normalize_input, vocab=train_ds.vocab, uq_cap=uq_cap, max_objects=max_objects, cap_lang=train_ds.cap_lang)
 
     print("Train length:", len(train_ds))
     print("Validation length:", len(val_ds))
@@ -168,10 +168,10 @@ if __name__ == "__main__":
 
     # Generate the dataset
     if IS_TRAINING:
-        valg = GRAPHS_PATH_DEV
+        valg = DATASET_PATH_DEV
         vali = INSTAN_PATH_DEV
     else:
-        valg = GRAPHS_PATH_VAL
+        valg = DATASET_PATH_VAL
         vali = INSTAN_PATH_VAL
 
     # Load the vocabulary of the pretrianed model
@@ -182,7 +182,7 @@ if __name__ == "__main__":
         del x
 
     # Generate the dataset
-    train_dl, val_dl, vocab, train_ds, val_ds = generate_dataset(GRAPHS_PATH_TRAIN, INSTAN_PATH_TRAIN, valg, vali, uq_cap=UQ_CAP, batch_size=BATCH_SIZE, max_objects=MAX_OBJECTS, idx2word=idx2word, word2idx=word2idx)
+    train_dl, val_dl, vocab, train_ds, val_ds = generate_dataset(DATASET_PATH_TRAIN, INSTAN_PATH_TRAIN, valg, vali, uq_cap=UQ_CAP, batch_size=BATCH_SIZE, max_objects=MAX_OBJECTS, idx2word=idx2word, word2idx=word2idx)
 
     # Generate the seq2seq model
     device = get_default_device()
