@@ -41,9 +41,9 @@ USE_ATTENTION = True # use attention in the decoder
 XY_DISTRIBUTION_SIZE = 32 # Size of grid use in the picture to approximate the bounding boxes.
 
 # Training
-EPOCHS = 3 # Number of epochs to train
+EPOCHS = 20 # Number of epochs to train
 PRINT_EVERY = 50 # Print information about the model every n steps
-IS_TRAINING = False # Set the model to training or validation. Values: True -> Training mode. False -> Validation mode
+IS_TRAINING = True # Set the model to training or validation. Values: True -> Training mode. False -> Validation mode
 CHECKPOINTS_PATH = "./checkpoints/1" # Path to save the epochs and average losses
 
 # Validation
