@@ -25,14 +25,14 @@ import os
 import pickle
 
 # Dataloader
-BATCH_SIZE = 32
+BATCH_SIZE = 4 
 NUM_WORKERS = 4
 SHUFFLE = True
 PIN_MEMORY = True
 
 # Dataset hyperparameters
 IMAGE_SIZE = (256, 256)
-UQ_CAP = True # Use one caption or all the captions. Values: False -> All the captions. True -> One caption
+UQ_CAP = False # Use one caption or all the captions. Values: False -> All the captions. True -> One caption
 HIDDEN_SIZE = 768
 MAX_OBJECTS = 10 # Maximum number of objects to use from the dataset
 NORMALIZE_INPUT = True # Normalize the pictures to range [0, 1].

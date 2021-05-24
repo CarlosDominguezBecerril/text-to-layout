@@ -46,10 +46,10 @@ class CocoDataset(Dataset):
                     continue
 
                 if image_id in self.seen:
-                    image_id_c = str(annot['image_id']) + "-" + str(self.seen['image_id'])
+                    image_id_c = str(image_id) + "-" + str(self.seen[image_id])
                     self.seen[image_id] += 1
                 else:
-                    image_id_c = str(annot['image_id']) + "-" + "0"
+                    image_id_c = str(image_id) + "-" + "0"
                     self.seen[image_id] = 1
 
                 self.image_ids.append(image_id_c)
@@ -188,7 +188,6 @@ class CocoDataset(Dataset):
 
         boxes_coco, ids_coco = self.get_coco_objects_tensor(out_idx)
         out_idx = torch.LongTensor([out_idx])
-
 
         return caption, boxes_coco, ids_coco, out_idx
 

@@ -12,8 +12,6 @@ class EncoderBERT(nn.Module):
 
         self.pretrained_path = pretrained_path # The path of the pretrained model (None if BERT-base)
         self.freeze = freeze 
-        # Tokenizer
-        # self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         
         # Build the model
         self.model = None
@@ -32,37 +30,13 @@ class EncoderBERT(nn.Module):
         Returns:
 
         """
-        """
-        # Tokenize the input and prepare it for the model            
-        encoding = self.tokenizer(captions, return_tensors='pt', padding=True, truncation=True)
-        input_ids = encoding['input_ids']
-        attention_mask = encoding['attention_mask']
-
-        # Mover a otro lado
-        if self.freeze == True:
-            self.model.eval()
-        else:
-            self.model.train()
-        """
 
         outputs = self.model(input_ids, attention_mask=attention_mask, output_hidden_states=True)
 
         # Return the [CLS] token embedding
         cls = outputs.hidden_states[-1].permute(1, 0, 2)[0]
         # cls [batch_size, 768]
-        # print("cls shape", cls.shape)
+
         return cls
 
-"""
-# NOTE: only to test the class
-# To load the BERT trained by me (caption-triples matching)
 
-encoder = EncoderBERT(pretrained_path=None, freeze=True)
-
-# To load the original BERT-base
-#encoder = EncoderBERT(pretrained_path=None, freeze=True)
-captions = ["Here we are!", "A dog is running.", "What a nice day to go to the beach!"]
-
-cls = encoder(captions)
-print(cls.size())
-"""

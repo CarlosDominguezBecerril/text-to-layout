@@ -99,6 +99,7 @@ class Seq2Seq(nn.Module):
         decoder_hidden = self.encoder(inputs_ids, attention_masks)
         decoder_hidden = decoder_hidden.unsqueeze(0)
         decoder_hidden = (decoder_hidden.contiguous(), decoder_hidden.contiguous())
+        
         # Obtain the batch size
         batch_size = decoder_hidden[0].size(1)
 
