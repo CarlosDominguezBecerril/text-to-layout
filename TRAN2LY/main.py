@@ -32,7 +32,7 @@ PIN_MEMORY = True
 
 # Dataset hyperparameters
 IMAGE_SIZE = (256, 256)
-UQ_CAP = False # Use one caption or all the captions. Values: False -> All the captions. True -> One caption
+UQ_CAP = True # Use one caption or all the captions. Values: False -> All the captions. True -> One caption
 HIDDEN_SIZE = 768
 MAX_OBJECTS = 10 # Maximum number of objects to use from the dataset
 NORMALIZE_INPUT = True # Normalize the pictures to range [0, 1].
@@ -45,9 +45,9 @@ PRINT_EVERY = 50 # Print information about the model every n steps
 IS_TRAINING = True # Set the model to training or validation. Values: True -> Training mode. False -> Validation mode
 CHECKPOINTS_PATH = "./checkpoints/1" # Path to save the epochs and average losses
 PRETRAINED_ENCODER = True # Use the pretrained encoder
-FREEZE_ENCODER = True # Freeze the weights of the encoder
+FREEZE_ENCODER = False # Freeze the weights of the encoder
 ENCODER_PATH = "./data/2021-05-10-17_46_31" # Path of the pretrained encoder
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-5
 
 # Validation
 CALCULATE_GAUSS_DICT = True # Gauss dictionary with means and std for the objects in the dataset. Values: True -> calculates and saves the gaussian dict. False -> Uses the file located at GAUSS_DICT_PATH  
@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
     # Train or validate
     if IS_TRAINING:
-        train = SupervisedTrainer(seq2seq, vocab, EPOCHS, PRINT_EVERY, lloss, bloss_xy, bloss_wh, BATCH_SIZE, HIDDEN_SIZE, LEARNING_RATE, torch.optim.Adam, len(train_dl), checkpoints_path=CHECKPOINTS_PATH, gaussian_dict=gaussian_dict, validator_output_path=VALIDATION_OUTPUT, save_output=SAVE_OUTPUT)        
+        train = SupervisedTrainer(seq2seq, vocab, EPOCHS, PRINT_EVERY, lloss, bloss_xy, bloss_wh, BATCH_SIZE, HIDDEN_SIZE, LEARNING_RATE, torch.optim.AdamW, len(train_dl), checkpoints_path=CHECKPOINTS_PATH, gaussian_dict=gaussian_dict, validator_output_path=VALIDATION_OUTPUT, save_output=SAVE_OUTPUT)        
         train.train_epoches(train_dl, train_ds, val_dl, val_ds)
     else:
         # Epoch to validate

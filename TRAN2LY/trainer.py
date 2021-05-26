@@ -24,8 +24,9 @@ class SupervisedTrainer():
         self.checkpoints_path = checkpoints_path if checkpoints_path[-1] != "/" else checkpoints_path[:-1]
 
         # Optimizer and scheduler
-        self.optimizer = self.opt_func(self.seq2seq.parameters(), self.max_lr, weight_decay=1e-4)
-        self.sched = torch.optim.lr_scheduler.OneCycleLR(self.optimizer, self.max_lr, epochs=self.epochs, steps_per_epoch=steps_per_epoch)
+        # self.optimizer = self.opt_func(self.seq2seq.parameters(), self.max_lr, weight_decay=1e-4)
+        # self.sched = torch.optim.lr_scheduler.OneCycleLR(self.optimizer, self.max_lr, epochs=self.epochs, steps_per_epoch=steps_per_epoch)
+        self.optimizer = self.opt_func(self.seq2seq.parameters(), self.max_lr)
 
         # Generate the evaluator
         self.gaussian_dict = gaussian_dict
@@ -130,7 +131,7 @@ class SupervisedTrainer():
 
         self.optimizer.step()
         
-        self.sched.step()
+        # self.sched.step()
 
         return class_loss.item(), wh_loss.item(), xy_prob_loss.item(), xy_loss.item()
 
