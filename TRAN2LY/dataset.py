@@ -11,11 +11,12 @@ from transformers import BertTokenizer
 
 class CocoDataset(Dataset):
     
-    def __init__(self, dataset_path, instan_path, normalize=True, vocab=None, image_size=(256, 256), uq_cap=False, max_objects=10):
+    def __init__(self, dataset_path, instan_path, white_list=None, normalize=True, vocab=None, image_size=(256, 256), uq_cap=False, max_objects=10):
         
         # Paths of the file
         self.dataset_path = dataset_path
         self.instan_path = instan_path
+        self.white_list = white_list
 
         # Normalize input
         self.normalize = normalize
@@ -29,7 +30,11 @@ class CocoDataset(Dataset):
 
         # Load all the captions
         dataset_data = None
-        
+
+        if white_list != None:
+            with open(white_list, "r") as json_file:
+                valid_ids = set(json.load(json_file))
+
         with open(self.dataset_path, "r") as json_file:
             dataset_data = json.load(json_file)
 
@@ -42,7 +47,7 @@ class CocoDataset(Dataset):
             for annot in dataset_data['annotations']:
                 # If we are using one caption take the first one that appears
                 image_id = annot['image_id']
-                if self.uq_cap and image_id in self.seen:
+                if (self.uq_cap and image_id in self.seen) or (image_id not in valid_ids):
                     continue
 
                 if image_id in self.seen:

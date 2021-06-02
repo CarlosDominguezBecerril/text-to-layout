@@ -98,10 +98,12 @@ class Seq2Seq(nn.Module):
         # Encode the input
         decoder_hidden = self.encoder(inputs_ids, attention_masks)
         decoder_hidden = decoder_hidden.unsqueeze(0)
-        decoder_hidden = (decoder_hidden.contiguous(), decoder_hidden.contiguous())
-        
+
+        # decoder_hidden = (decoder_hidden.contiguous(), decoder_hidden.contiguous())
+        decoder_hidden = decoder_hidden.contiguous()
+
         # Obtain the batch size
-        batch_size = decoder_hidden[0].size(1)
+        batch_size = decoder_hidden.size(1)
 
         # Establish the longest length of the input
         trg_len = target_l.size(1)
@@ -163,7 +165,7 @@ class Seq2Seq(nn.Module):
 
             # Sample if the xy_coordinates are not calculated
             if xy_coordinates == None:
-                xy_distance = xy_out.div(self.temperature).exp()
+                xy_distance = xy_out.div(self.temperature).exp().clamp(min=1e-5, max=1e5)
                 xy_topi = torch.multinomial(xy_distance, 1)
                 xy_coordinates = self.convert_to_coordinates(xy_topi)
 

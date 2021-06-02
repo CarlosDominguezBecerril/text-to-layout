@@ -51,10 +51,13 @@ class EncoderBERT(nn.Module):
 
         # Return the [CLS] token embedding
         print([o.shape for o in outputs.hidden_states])
-        cls = outputs.hidden_states[-1].permute(1, 0, 2)[0]
+        cls = outputs.hidden_states[-1]
         # cls [batch_size, 768]
-        # print("cls shape", cls.shape)
-        return cls
+        print("cls shape", cls.shape)
+        print(cls[0].shape)
+        print(outputs[0] == outputs.hidden_states[0])
+        print(outputs[0][0] == outputs.hidden_states[-1][0])
+        return cls.permute(1, 0, 2)[0]
 
 
 # NOTE: only to test the class

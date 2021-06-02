@@ -33,11 +33,17 @@ class DecoderRNN(nn.Module):
         if self.use_attention:
             # Attention
             self.attention = Attention(self.hidden_size)
+        """    
         self.rnn = nn.LSTM(
             (2 if self.use_attention else 1) * self.hidden_size + 2 * self.bbox_dimension, 
             self.hidden_size, 
             1)
-        
+        """
+        self.rnn = nn.GRU(
+            (2 if self.use_attention else 1) * self.hidden_size + 2 * self.bbox_dimension, 
+            self.hidden_size, 
+            1)
+
         # Class prediction
         self.class_out = nn.Linear((3 if self.use_attention else 2) * self.hidden_size, self.output_size)
 
@@ -140,7 +146,7 @@ class DecoderRNN(nn.Module):
             # next_xy_decoder_input = [batch_size, bbox_dimension]
         else:
             # Sample
-            xy_distance = xy_out.div(self.temperature).exp()
+            xy_distance = xy_out.div(self.temperature).exp().clamp(min=1e-5, max=1e5)
             xy_topi = torch.multinomial(xy_distance, 1)
             topi = self.convert_to_coordinates(xy_topi)
             next_xy_decoder_input = self.next_xy_dropout(self.next_xy_input(topi))
