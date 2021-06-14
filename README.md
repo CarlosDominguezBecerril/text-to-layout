@@ -72,6 +72,9 @@ To understand the metrics check chapter 5: https://drive.google.com/file/d/1HZIB
 | RNN2LY_PT     | 0.464 | 0.188 | 7.587    | 0.907  | 0.609  | 0.534  | 0.358 | 0.171 | 0.291 | 0.164 |
 | RNN2LY_FT     | 0.459 | 0.190 | 7.478    | 0.911  | 0.606  | 0.529  | 0.364 | 0.173 | 0.296 | 0.167 |
 
+PT stands for pretrained RNN encoder.
+
+FT stands for pretrained and fine-tuned RNN encoder.
 
 
 ## Examples
