@@ -2,6 +2,8 @@ from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 
+from transformers import AdamW
+
 from model.encoderBERT import EncoderBERT
 from model.decoderRNN import DecoderRNN
 from model.seq2seq import Seq2Seq
@@ -24,8 +26,9 @@ import os
 
 import pickle
 
+
 # Dataloader
-BATCH_SIZE = 4 
+BATCH_SIZE = 32
 NUM_WORKERS = 4
 SHUFFLE = True
 PIN_MEMORY = True
@@ -47,7 +50,7 @@ CHECKPOINTS_PATH = "./checkpoints/1" # Path to save the epochs and average losse
 PRETRAINED_ENCODER = True # Use the pretrained encoder
 FREEZE_ENCODER = False # Freeze the weights of the encoder
 ENCODER_PATH = "./data/2021-05-10-17_46_31" # Path of the pretrained encoder
-LEARNING_RATE = 1e-5
+LEARNING_RATE = 5e-5
 
 # Validation
 CALCULATE_GAUSS_DICT = True # Gauss dictionary with means and std for the objects in the dataset. Values: True -> calculates and saves the gaussian dict. False -> Uses the file located at GAUSS_DICT_PATH  
@@ -207,7 +210,7 @@ if __name__ == "__main__":
 
     # Train or validate
     if IS_TRAINING:
-        train = SupervisedTrainer(seq2seq, vocab, EPOCHS, PRINT_EVERY, lloss, bloss_xy, bloss_wh, BATCH_SIZE, HIDDEN_SIZE, LEARNING_RATE, torch.optim.AdamW, len(train_dl), checkpoints_path=CHECKPOINTS_PATH, gaussian_dict=gaussian_dict, validator_output_path=VALIDATION_OUTPUT, save_output=SAVE_OUTPUT)        
+        train = SupervisedTrainer(seq2seq, vocab, EPOCHS, PRINT_EVERY, lloss, bloss_xy, bloss_wh, BATCH_SIZE, HIDDEN_SIZE, LEARNING_RATE, AdamW, len(train_dl), checkpoints_path=CHECKPOINTS_PATH, gaussian_dict=gaussian_dict, validator_output_path=VALIDATION_OUTPUT, save_output=SAVE_OUTPUT)        
         train.train_epoches(train_dl, train_ds, val_dl, val_ds)
     else:
         # Epoch to validate

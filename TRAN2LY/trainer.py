@@ -6,6 +6,8 @@ from torch.nn import functional as F
 
 from evaluator import Evaluator
 
+from transformers import get_linear_schedule_with_warmup
+
 class SupervisedTrainer():
 
     def __init__(self, seq2seq, vocab, epochs, print_every, loss_class, loss_bbox_xy, loss_bbox_wh, batch_size, hidden_size, max_lr, opt_func, steps_per_epoch, checkpoints_path="./checkpoints", gaussian_dict=None, validator_output_path="./evaluator_output", save_output=False):
@@ -26,7 +28,10 @@ class SupervisedTrainer():
         # Optimizer and scheduler
         # self.optimizer = self.opt_func(self.seq2seq.parameters(), self.max_lr, weight_decay=1e-4)
         # self.sched = torch.optim.lr_scheduler.OneCycleLR(self.optimizer, self.max_lr, epochs=self.epochs, steps_per_epoch=steps_per_epoch)
-        self.optimizer = self.opt_func(self.seq2seq.parameters(), self.max_lr)
+        self.optimizer = self.opt_func(self.seq2seq.parameters(), lr=self.max_lr, eps=1e-8)
+        self.sched = get_linear_schedule_with_warmup(self.optimizer,
+                                                num_warmup_steps=0, # Default value
+                                                num_training_steps=steps_per_epoch*self.epochs)
 
         # Generate the evaluator
         self.gaussian_dict = gaussian_dict
@@ -131,7 +136,7 @@ class SupervisedTrainer():
 
         self.optimizer.step()
         
-        # self.sched.step()
+        self.sched.step()
 
         return class_loss.item(), wh_loss.item(), xy_prob_loss.item(), xy_loss.item()
 
