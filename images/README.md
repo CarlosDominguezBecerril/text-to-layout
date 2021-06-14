@@ -1,5 +1,4 @@
 # Text-to-layout examples
-## Captions for each layout:
 ### A dirt covered floor in a home kitchen. MSCOCO image ID: 65358. 
 ![alt text](images/../65358.png)
 ### A woman sitting with a boy cutting a cake. MSCOCO image ID: 194097.
