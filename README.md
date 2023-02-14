@@ -4,8 +4,6 @@ Text-to-layout using graph convolutional neural network (GCNN) or recurrent neur
 
 Further information of the project can be found on: https://drive.google.com/file/d/1HZIBCutbvoDOcpghDzUTmfn9fKN1kr_s/view?usp=sharing
 
-Transformer version comming soon.
-
 ## Libraries
 The code has been tested using Python 3.8.8 and pytorch 1.7.1.
 
